@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask Filos — Mini Chat</title>
+    <style>
+        :root {
+            --bg-primary: #E4D9C4;
+            --text-primary: #001A33;
+            --accent-black: #000000;
+            --accent-white: #FFFFFF;
+            --bg-secondary: #F5F0E6;
+            --border-color: #D4C9B4;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --bubble-user: #001A33;
+            --bubble-assistant: #F5F0E6;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #001A33;
+            --text-primary: #E4D9C4;
+            --bg-secondary: #0A2B4A;
+            --border-color: #1A3B5A;
+            --bubble-user: #E4D9C4;
+            --bubble-assistant: #0A2B4A;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .selector-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .selector-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+            opacity: 0.8;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent-black);
+        }
+
+        .theme-toggle {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            direction: ltr;
+        }
+
+        .chat-container[data-rtl="true"] {
+            direction: rtl;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message.assistant {
+            align-items: flex-start;
+        }
+
+        .message[data-rtl="true"].user {
+            align-items: flex-start;
+        }
+
+        .message[data-rtl="true"].assistant {
+            align-items: flex-end;
+        }
+
+        .bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            word-wrap: break-word;
+        }
+
+        .bubble.user {
+            background: var(--bubble-user);
+            color: var(--bg-primary);
+        }
+
+        .bubble.assistant {
+            background: var(--bubble-assistant);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .citations {
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: 0.7;
+            color: var(--text-primary);
+        }
+
+        .citation-item {
+            margin-bottom: 2px;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 16px;
+            background: var(--bubble-assistant);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            max-width: 70%;
+            margin-bottom: 16px;
+        }
+
+        .typing-indicator.show {
+            display: flex;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .input-container {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .input-field {
+            flex: 1;
+            min-height: 40px;
+            max-height: 120px;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            resize: none;
+            font-family: inherit;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent-black);
+        }
+
+        .send-button {
+            padding: 10px 20px;
+            background: var(--accent-black);
+            color: var(--accent-white);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .send-button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        [data-rtl="true"] .input-row {
+            flex-direction: row-reverse;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="app-title">Ask Filos — Mini Chat</div>
+        
+        <div class="selector-group">
+            <div class="selector-label" data-en="Assistant" data-ar="المساعد">Assistant</div>
+            <select id="assistantSelect">
+                <option value="kuwait" data-en="Kuwait" data-ar="الكويت">Kuwait</option>
+                <option value="uae" data-en="UAE" data-ar="الإمارات">UAE</option>
+                <option value="ontario" data-en="Ontario (CA)" data-ar="أونتاريو (كندا)">Ontario (CA)</option>
+            </select>
+        </div>
+
+        <div class="selector-group">
+            <div class="selector-label" data-en="Language" data-ar="اللغة">Language</div>
+            <select id="languageSelect">
+                <option value="en" data-en="English" data-ar="الإنجليزية">English</option>
+                <option value="ar" data-en="العربية" data-ar="العربية">العربية</option>
+            </select>
+        </div>
+
+        <button class="theme-toggle" id="themeToggle" data-en="Toggle Theme" data-ar="تبديل المظهر">Toggle Theme</button>
+    </div>
+
+    <div class="main-panel">
+        <div class="chat-container" id="chatContainer" aria-live="polite">
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+
+        <div class="input-container">
+            <div class="input-row">
+                <textarea 
+                    class="input-field" 
+                    id="messageInput" 
+                    placeholder="Type your message..." 
+                    rows="1"
+                    data-en-placeholder="Type your message..." 
+                    data-ar-placeholder="اكتب رسالتك..."
+                ></textarea>
+                <button class="send-button" id="sendButton" data-en="Send" data-ar="إرسال">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AskFilosChat {
+            constructor() {
+                this.currentAssistant = 'kuwait';
+                this.currentLanguage = 'en';
+                this.currentTheme = localStorage.getItem('theme') || 'light';
+                this.isTyping = false;
+                this.messages = {};
+                
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.applyTheme();
+                this.updateUI();
+                this.loadMessages();
+                this.seedConversation();
+            }
+
+            setupEventListeners() {
+                document.getElementById('assistantSelect').addEventListener('change', (e) => {
+                    this.currentAssistant = e.target.value;
+                    this.loadMessages();
+                    this.updateUI();
+                });
+
+                document.getElementById('languageSelect').addEventListener('change', (e) => {
+                    this.currentLanguage = e.target.value;
+                    this.loadMessages();
+                    this.updateUI();
+                });
+
+                document.getElementById('themeToggle').addEventListener('click', () => {
+                    this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+                    localStorage.setItem('theme', this.currentTheme);
+                    this.applyTheme();
+                });
+
+                document.getElementById('sendButton').addEventListener('click', () => {
+                    this.sendMessage();
+                });
+
+                document.getElementById('messageInput').addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+
+                document.getElementById('messageInput').addEventListener('input', (e) => {
+                    this.updateSendButton();
+                    this.autoResize(e.target);
+                });
+            }
+
+            applyTheme() {
+                document.documentElement.setAttribute('data-theme', this.currentTheme);
+            }
+
+            updateUI() {
+                const isRTL = this.currentLanguage === 'ar';
+                document.getElementById('chatContainer').setAttribute('data-rtl', isRTL);
+                
+                // Update labels
+                document.querySelectorAll('[data-en]').forEach(el => {
+                    const key = isRTL ? 'ar' : 'en';
+                    const text = el.getAttribute(`data-${key}`);
+                    if (text && !el.tagName.toLowerCase().includes('option')) {
+                        el.textContent = text;
+                    }
+                });
+
+                // Update placeholders
+                document.querySelectorAll('[data-en-placeholder]').forEach(el => {
+                    const key = isRTL ? 'ar' : 'en';
+                    const placeholder = el.getAttribute(`data-${key}-placeholder`);
+                    if (placeholder) {
+                        el.placeholder = placeholder;
+                    }
+                });
+            }
+
+            loadMessages() {
+                const key = `${this.currentAssistant}-${this.currentLanguage}`;
+                this.messages = JSON.parse(localStorage.getItem(key) || '[]');
+                this.renderMessages();
+            }
+
+            saveMessages() {
+                const key = `${this.currentAssistant}-${this.currentLanguage}`;
+                localStorage.setItem(key, JSON.stringify(this.messages.slice(-20)));
+            }
+
+            seedConversation() {
+                if (this.messages.length === 0) {
+                    const welcomeMessage = this.currentLanguage === 'ar' 
+                        ? 'مرحباً! كيف يمكنني مساعدتك اليوم؟'
+                        : 'Hello! How can I help you today?';
+                    
+                    this.addMessage('assistant', welcomeMessage, []);
+                }
+            }
+
+            async sendMessage() {
+                const input = document.getElementById('messageInput');
+                const text = input.value.trim();
+                
+                if (!text || this.isTyping) return;
+
+                this.addMessage('user', text, []);
+                input.value = '';
+                this.autoResize(input);
+                this.updateSendButton();
+
+                this.showTyping();
+                this.isTyping = true;
+
+                try {
+                    const response = await this.mockAskFilos({
+                        assistant: this.currentAssistant,
+                        language: this.currentLanguage,
+                        text: text
+                    });
+
+                    this.hideTyping();
+                    this.addMessage('assistant', response.answer, response.citations);
+                } catch (error) {
+                    this.hideTyping();
+                    const errorMessage = this.currentLanguage === 'ar' 
+                        ? 'عذراً، حدث خطأ. يرجى المحاولة مرة أخرى.'
+                        : 'Sorry, an error occurred. Please try again.';
+                    this.addMessage('assistant', errorMessage, []);
+                }
+
+                this.isTyping = false;
+                this.updateSendButton();
+            }
+
+            addMessage(sender, text, citations) {
+                this.messages.push({ sender, text, citations, timestamp: Date.now() });
+                this.saveMessages();
+                this.renderMessages();
+            }
+
+            renderMessages() {
+                const container = document.getElementById('chatContainer');
+                const typingIndicator = document.getElementById('typingIndicator');
+                
+                container.innerHTML = '';
+                container.appendChild(typingIndicator);
+
+                this.messages.forEach(message => {
+                    const messageEl = this.createMessageElement(message);
+                    container.appendChild(messageEl);
+                });
+
+                container.scrollTop = container.scrollHeight;
+            }
+
+            createMessageElement(message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${message.sender}`;
+                messageDiv.setAttribute('data-rtl', this.currentLanguage === 'ar');
+
+                const bubble = document.createElement('div');
+                bubble.className = `bubble ${message.sender}`;
+                bubble.textContent = message.text;
+
+                messageDiv.appendChild(bubble);
+
+                if (message.citations && message.citations.length > 0) {
+                    const citationsDiv = document.createElement('div');
+                    citationsDiv.className = 'citations';
+                    
+                    message.citations.forEach(citation => {
+                        const citationItem = document.createElement('div');
+                        citationItem.className = 'citation-item';
+                        citationItem.textContent = `${citation.law}, ${citation.article}`;
+                        citationsDiv.appendChild(citationItem);
+                    });
+
+                    messageDiv.appendChild(citationsDiv);
+                }
+
+                return messageDiv;
+            }
+
+            showTyping() {
+                document.getElementById('typingIndicator').classList.add('show');
+                document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+            }
+
+            hideTyping() {
+                document.getElementById('typingIndicator').classList.remove('show');
+            }
+
+            updateSendButton() {
+                const input = document.getElementById('messageInput');
+                const button = document.getElementById('sendButton');
+                const isEmpty = !input.value.trim();
+                button.disabled = isEmpty || this.isTyping;
+            }
+
+            autoResize(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+            }
+
+            async mockAskFilos({ assistant, language, text }) {
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 400));
+
+                const responses = {
+                    kuwait: {
+                        en: {
+                            answer: "Based on Kuwait Labor Law No. 6/2010, Article 51, employees are entitled to annual leave as specified in the employment contract. The law ensures proper working conditions and employee rights.",
+                            citations: [{ law: "Labor Law No. 6/2010", article: "Article 51" }]
+                        },
+                        ar: {
+                            answer: "وفقاً لقانون العمل الكويتي رقم 6/2010، المادة 51، يحق للموظفين إجازة سنوية كما هو محدد في عقد العمل. يضمن القانون ظروف العمل المناسبة وحقوق الموظفين.",
+                            citations: [{ law: "قانون العمل رقم 6/2010", article: "المادة 51" }]
+                        }
+                    },
+                    uae: {
+                        en: {
+                            answer: "According to Federal Decree-Law 33/2021, Article 27, employers must provide a safe working environment and comply with occupational health and safety standards. This law protects worker rights comprehensively.",
+                            citations: [{ law: "Federal Decree-Law 33/2021", article: "Article 27" }]
+                        },
+                        ar: {
+                            answer: "وفقاً للقانون الاتحادي رقم 33/2021، المادة 27، يجب على أصحاب العمل توفير بيئة عمل آمنة والامتثال لمعايير الصحة والسلامة المهنية. يحمي هذا القانون حقوق العمال بشكل شامل.",
+                            citations: [{ law: "القانون الاتحادي رقم 33/2021", article: "المادة 27" }]
+                        }
+                    },
+                    ontario: {
+                        en: {
+                            answer: "Under the Employment Standards Act, 2000, Section 23, employees are entitled to minimum wage and overtime pay. The Act establishes fair employment practices and worker protections in Ontario.",
+                            citations: [{ law: "Employment Standards Act, 2000", article: "Section 23" }]
+                        },
+                        ar: {
+                            answer: "بموجب قانون معايير التوظيف لعام 2000، القسم 23، يحق للموظفين الحد الأدنى للأجور وأجر العمل الإضافي. يحدد القانون ممارسات التوظيف العادلة وحماية العمال في أونتاريو.",
+                            citations: [{ law: "قانون معايير التوظيف لعام 2000", article: "القسم 23" }]
+                        }
+                    }
+                };
+
+                return responses[assistant][language];
+            }
+        }
+
+        // Initialize the chat when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new AskFilosChat();
+        });
+    </script>
+</body>
+</html>
